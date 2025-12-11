@@ -1,0 +1,14 @@
+# This file is for Railway deployment of the server
+# Railway Root Directory should be set to repo root (empty or ".")
+
+[phases.setup]
+nixPkgs = ["nodejs_18", "pnpm"]
+
+[phases.install]
+cmds = ["pnpm install"]
+
+[phases.build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "node apps/server/dist/index.js"
