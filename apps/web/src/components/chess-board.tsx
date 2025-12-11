@@ -24,23 +24,6 @@ export function ChessBoard({
 }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
 
-  // Calculate legal moves from selected square
-  const legalMovesFromSquare = useMemo(() => {
-    if (!selectedSquare) return [];
-
-    // Filter legal moves that start from selected square
-    return boardState.legalMoves.filter((move) => {
-      // SAN notation parsing - simplified
-      // Pawn moves start with lowercase letter (file) or just destination
-      // Piece moves start with uppercase letter
-      const fromSquare = selectedSquare.toLowerCase();
-
-      // This is a simplified check - for a proper implementation,
-      // we'd need to parse SAN or use verbose moves from chess.js
-      return move.includes(fromSquare) || move.toLowerCase().startsWith(fromSquare[0]);
-    });
-  }, [selectedSquare, boardState.legalMoves]);
-
   // Custom square styles
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
@@ -102,35 +85,34 @@ export function ChessBoard({
       }
 
       if (selectedSquare) {
-        // Try to make a move
-        const moveAttempt = `${selectedSquare}${square}`;
+        // If clicking the same square, deselect
+        if (selectedSquare === square) {
+          setSelectedSquare(null);
+          return;
+        }
+
+        // Send move in UCI format (from+to), chess.js will parse it
+        const uciMove = `${selectedSquare}${square}`;
 
         // Check if this might be a promotion
         const isPawnPromotion =
           selectedSquare[1] === (playerColor === 'white' ? '7' : '2') &&
           square[1] === (playerColor === 'white' ? '8' : '1');
 
-        // Find matching legal move
-        const matchingMove = boardState.legalMoves.find((m) => {
-          // Simple matching - works for most moves
-          return m.includes(square) || m === moveAttempt;
-        });
-
-        if (matchingMove) {
-          if (isPawnPromotion) {
-            // Default to queen for now - can add promotion picker later
-            onMove(matchingMove.includes('=') ? matchingMove : `${matchingMove}=Q`);
-          } else {
-            onMove(matchingMove);
-          }
+        if (isPawnPromotion) {
+          // Default to queen for now - can add promotion picker later
+          onMove(`${uciMove}q`);
+        } else {
+          onMove(uciMove);
         }
 
         setSelectedSquare(null);
       } else {
+        // Only select squares that have the player's pieces
         setSelectedSquare(square);
       }
     },
-    [selectedSquare, disabled, boardState.turn, boardState.legalMoves, playerColor, onMove]
+    [selectedSquare, disabled, boardState.turn, playerColor, onMove]
   );
 
   // Handle drag-and-drop
@@ -140,28 +122,22 @@ export function ChessBoard({
         return false;
       }
 
-      // Find matching legal move
+      // Send move in UCI format (from+to), chess.js will parse it
+      const uciMove = `${sourceSquare}${targetSquare}`;
+
       const isPawnPromotion =
         sourceSquare[1] === (playerColor === 'white' ? '7' : '2') &&
         targetSquare[1] === (playerColor === 'white' ? '8' : '1');
 
-      const matchingMove = boardState.legalMoves.find((m) => {
-        return m.includes(sourceSquare) && m.includes(targetSquare);
-      });
-
-      if (matchingMove) {
-        if (isPawnPromotion) {
-          onMove(matchingMove.includes('=') ? matchingMove : `${matchingMove}=Q`);
-        } else {
-          onMove(matchingMove);
-        }
-        setSelectedSquare(null);
-        return true;
+      if (isPawnPromotion) {
+        onMove(`${uciMove}q`);
+      } else {
+        onMove(uciMove);
       }
-
-      return false;
+      setSelectedSquare(null);
+      return true;
     },
-    [disabled, boardState.turn, boardState.legalMoves, playerColor, onMove]
+    [disabled, boardState.turn, playerColor, onMove]
   );
 
   return (

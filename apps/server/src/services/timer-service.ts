@@ -27,6 +27,7 @@ export class TimerService {
    * Starts timers for a game.
    */
   startGame(gameId: string, turnTimeSeconds: number, gracePeriodSeconds: number): void {
+    console.log(`TimerService: Starting game ${gameId} with turnTime=${turnTimeSeconds}s, gracePeriod=${gracePeriodSeconds}s`);
     // Create timer controller
     const controller = new TimerController(turnTimeSeconds, gracePeriodSeconds);
 
@@ -84,10 +85,12 @@ export class TimerService {
 
     switch (event.type) {
       case 'grace_started':
+        console.log(`TimerService: Grace started for ${event.player} in game ${gameId}, graceRemaining=${event.timerState.graceTimeRemaining}ms`);
         room.broadcastGraceStarted(event.player, event.timerState.graceTimeRemaining);
         break;
 
       case 'grace_expired':
+        console.log(`TimerService: Grace expired for ${event.player} in game ${gameId}`);
         this.onGraceExpired(gameId, event.player);
         break;
 
@@ -96,6 +99,7 @@ export class TimerService {
         break;
 
       case 'turn_expired':
+        console.log(`TimerService: Turn expired for ${event.player} in game ${gameId}`);
         // Grace period will follow
         break;
     }
@@ -120,7 +124,9 @@ export class TimerService {
         timerState.whiteTimeRemaining,
         timerState.blackTimeRemaining,
         timerState.activePlayer,
-        Date.now()
+        Date.now(),
+        timerState.isGracePeriod,
+        timerState.graceTimeRemaining
       );
     }, 100); // Sync every 100ms
 

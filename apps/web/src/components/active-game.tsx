@@ -18,6 +18,7 @@ import { ResignConfirmModal } from './resign-confirm-modal';
 import { DrawOfferModal } from './draw-offer-modal';
 import { DrawReceivedModal } from './draw-received-modal';
 import { OpponentDisconnected } from './opponent-disconnected';
+import { GracePeriodOverlay } from './grace-period-overlay';
 
 interface ActiveGameProps {
   socket: Socket | null;
@@ -286,6 +287,13 @@ export function ActiveGame({ socket, gameId }: ActiveGameProps) {
 
       {/* Opponent disconnected notification */}
       <OpponentDisconnected isVisible={opponentDisconnected} />
+
+      {/* Grace period overlay - shows urgent warning when player must move */}
+      <GracePeriodOverlay
+        isActive={timerState?.isGracePeriod || false}
+        isMyTurn={timerState?.activePlayer === playerColor}
+        graceTimeRemaining={timerState?.graceTimeRemaining || 0}
+      />
     </div>
   );
 }

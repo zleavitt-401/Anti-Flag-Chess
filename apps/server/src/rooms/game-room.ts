@@ -77,13 +77,17 @@ export class GameRoom {
     whiteTimeRemaining: number,
     blackTimeRemaining: number,
     activePlayer: 'white' | 'black',
-    serverTime: number
+    serverTime: number,
+    isGracePeriod: boolean,
+    graceTimeRemaining: number
   ): void {
     this.io.to(this.getRoomName()).emit('timer_sync', {
       whiteTimeRemaining,
       blackTimeRemaining,
       activePlayer,
       serverTime,
+      isGracePeriod,
+      graceTimeRemaining,
     });
   }
 

@@ -78,10 +78,24 @@ export class GameState {
 
   /**
    * Checks if a move is legal without making it.
+   * Accepts both SAN (e4, Nf3) and UCI notation (e2e4, g1f3).
    */
-  isLegalMove(san: string): boolean {
+  isLegalMove(moveStr: string): boolean {
+    // First check SAN list
     const moves = this.chess.moves();
-    return moves.includes(san);
+    if (moves.includes(moveStr)) {
+      return true;
+    }
+
+    // Try to validate by attempting the move on a copy
+    // chess.js move() handles UCI notation with its permissive parser
+    try {
+      const chessCopy = new Chess(this.chess.fen());
+      const result = chessCopy.move(moveStr);
+      return result !== null;
+    } catch {
+      return false;
+    }
   }
 
   /**

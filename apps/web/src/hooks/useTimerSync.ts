@@ -9,6 +9,8 @@ interface TimerSyncEvent {
   blackTimeRemaining: number;
   activePlayer: 'white' | 'black';
   serverTime: number;
+  isGracePeriod: boolean;
+  graceTimeRemaining: number;
 }
 
 export function useTimerSync(socket: Socket | null) {
@@ -20,8 +22,8 @@ export function useTimerSync(socket: Socket | null) {
         whiteTimeRemaining: event.whiteTimeRemaining,
         blackTimeRemaining: event.blackTimeRemaining,
         activePlayer: event.activePlayer,
-        isGracePeriod: false,
-        graceTimeRemaining: 0,
+        isGracePeriod: event.isGracePeriod,
+        graceTimeRemaining: event.graceTimeRemaining,
         lastSyncAt: event.serverTime,
       });
     },

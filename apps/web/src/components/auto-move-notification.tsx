@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface AutoMoveNotificationProps {
   isVisible: boolean;
@@ -9,21 +9,27 @@ interface AutoMoveNotificationProps {
 }
 
 export function AutoMoveNotification({ isVisible, player, onDismiss }: AutoMoveNotificationProps) {
-  const [show, setShow] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isVisible) {
-      setShow(true);
-      // Auto-dismiss after 3 seconds
-      const timer = setTimeout(() => {
-        setShow(false);
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      // Auto-dismiss after 4 seconds
+      timerRef.current = setTimeout(() => {
         onDismiss?.();
-      }, 3000);
-      return () => clearTimeout(timer);
+      }, 4000);
     }
-  }, [isVisible, onDismiss]);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [isVisible]); // Only depend on isVisible, not onDismiss
 
-  if (!show) return null;
+  if (!isVisible) return null;
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-bounce">

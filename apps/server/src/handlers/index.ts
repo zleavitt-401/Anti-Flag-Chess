@@ -27,11 +27,29 @@ export function registerHandlers(
     if (sessionId) {
       sessionStore.setSocketSession(socket.id, sessionId);
 
-      // Check for active game
+      // Check for active game and automatically rejoin room
       const gameId = sessionStore.getGameForSession(sessionId);
       if (gameId) {
         const game = gameStore.getGame(gameId);
         if (game && game.status !== 'ended') {
+          // Rejoin the game room
+          socket.join(`game:${gameId}`);
+
+          // Update player's socket ID in game store
+          gameStore.updatePlayer(gameId, sessionId, {
+            isConnected: true,
+            socketId: socket.id,
+          });
+
+          // Determine player's color
+          let playerColor: 'white' | 'black' | undefined;
+          if (game.players.white?.sessionId === sessionId) {
+            playerColor = 'white';
+          } else if (game.players.black?.sessionId === sessionId) {
+            playerColor = 'black';
+          }
+
+          // Notify client of active game
           socket.emit('active_game_found', {
             gameId,
             gameState: {
@@ -39,8 +57,20 @@ export function registerHandlers(
               moves: game.moves,
               settings: game.settings,
               status: game.status,
+              timerState: timerService.getTimerState(gameId),
             },
+            playerColor,
           });
+
+          // Notify opponent that player reconnected
+          for (const color of ['white', 'black'] as const) {
+            const player = game.players[color];
+            if (player && player.sessionId !== sessionId && player.socketId) {
+              io.to(player.socketId).emit('opponent_reconnected', {
+                playerColor: color === 'white' ? 'black' : 'white',
+              });
+            }
+          }
         }
       }
     }

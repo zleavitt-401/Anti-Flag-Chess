@@ -31,15 +31,26 @@ const sessionStore = new SessionStore();
 const timerService = new TimerService(io, gameStore, (gameId, player) => {
   // Handle grace period expiry (auto-move or lose on time)
   const game = gameStore.getGame(gameId);
-  if (!game || game.status !== 'active') return;
+  if (!game) {
+    console.log(`Grace expired handler: Game ${gameId} not found`);
+    return;
+  }
+  if (game.status !== 'active') {
+    console.log(`Grace expired handler: Game ${gameId} not active (status=${game.status})`);
+    return;
+  }
+
+  console.log(`Grace expired handler: Processing for ${player} in game ${gameId}, behavior=${game.settings.timeoutBehavior}`);
 
   const room = new GameRoom(io, gameId, gameStore, sessionStore);
 
   if (game.settings.timeoutBehavior === 'auto_move') {
     // Execute auto-move
     const autoMove = selectAutoMove(game.gameState);
+    console.log(`Grace expired handler: Auto-move selected: ${autoMove}`);
     if (autoMove) {
       const moveResult = game.gameState.makeMove(autoMove, true);
+      console.log(`Grace expired handler: Move result: ${moveResult ? moveResult.san : 'null'}`);
       if (moveResult) {
         game.moves.push(moveResult);
         timerService.onMoveMade(gameId);
@@ -47,16 +58,20 @@ const timerService = new TimerService(io, gameStore, (gameId, player) => {
         const boardState = game.gameState.getBoardState();
         const timerState = timerService.getTimerState(gameId);
 
+        console.log(`Grace expired handler: Broadcasting auto-move ${moveResult.san}, turn is now ${boardState.turn}`);
         room.broadcastAutoMove(moveResult, boardState, timerState!, 'grace_expired');
 
         // Check for game end
         const endCheck = checkGameEnd(boardState, boardState.turn);
         if (endCheck.isEnded && endCheck.result) {
+          console.log(`Grace expired handler: Game ended - ${endCheck.result.reason}`);
           timerService.stopGame(gameId);
           gameStore.endGame(gameId, endCheck.result);
           room.broadcastGameOver(endCheck.result, boardState);
         }
       }
+    } else {
+      console.log(`Grace expired handler: No auto-move available!`);
     }
   } else {
     // Lose on time
