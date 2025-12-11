@@ -21,7 +21,28 @@ function formatTime(seconds: number): string {
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
+// Find the closest preset option index for a given value
+function getSliderIndex(value: number): number {
+  let closestIndex = 0;
+  let closestDiff = Math.abs(TIME_OPTIONS[0].value - value);
+  for (let i = 1; i < TIME_OPTIONS.length; i++) {
+    const diff = Math.abs(TIME_OPTIONS[i].value - value);
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
 export function TurnTimeSlider({ value, onChange }: TurnTimeSliderProps) {
+  const sliderIndex = getSliderIndex(value);
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const index = parseInt(e.target.value, 10);
+    onChange(TIME_OPTIONS[index].value);
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
@@ -30,11 +51,11 @@ export function TurnTimeSlider({ value, onChange }: TurnTimeSliderProps) {
       </div>
       <input
         type="range"
-        min="10"
-        max="300"
-        step="10"
-        value={value}
-        onChange={(e) => onChange(parseInt(e.target.value, 10))}
+        min="0"
+        max={TIME_OPTIONS.length - 1}
+        step="1"
+        value={sliderIndex}
+        onChange={handleSliderChange}
         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
       />
       <div className="flex justify-between text-xs text-gray-500">
