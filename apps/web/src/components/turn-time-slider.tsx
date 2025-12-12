@@ -7,10 +7,15 @@ interface TurnTimeSliderProps {
 
 const TIME_OPTIONS = [
   { value: 10, label: '10s' },
+  { value: 20, label: '20s' },
   { value: 30, label: '30s' },
+  { value: 45, label: '45s' },
   { value: 60, label: '1min' },
+  { value: 90, label: '1.5min' },
   { value: 120, label: '2min' },
+  { value: 150, label: '2.5min' },
   { value: 180, label: '3min' },
+  { value: 240, label: '4min' },
   { value: 300, label: '5min' },
 ];
 
