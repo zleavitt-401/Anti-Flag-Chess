@@ -5,18 +5,18 @@ interface TurnTimeSliderProps {
   onChange: (value: number) => void;
 }
 
-const TIME_OPTIONS = [
-  { value: 10, label: '10s' },
-  { value: 20, label: '20s' },
-  { value: 30, label: '30s' },
-  { value: 45, label: '45s' },
-  { value: 60, label: '1min' },
-  { value: 90, label: '1.5min' },
-  { value: 120, label: '2min' },
-  { value: 150, label: '2.5min' },
-  { value: 180, label: '3min' },
-  { value: 240, label: '4min' },
-  { value: 300, label: '5min' },
+export const TIME_OPTIONS = [
+  { value: 10, label: '10s', showLabel: true },
+  { value: 20, label: '20s', showLabel: false },
+  { value: 30, label: '30s', showLabel: true },
+  { value: 45, label: '45s', showLabel: false },
+  { value: 60, label: '1m', showLabel: true },
+  { value: 90, label: '1.5m', showLabel: false },
+  { value: 120, label: '2m', showLabel: true },
+  { value: 150, label: '2.5m', showLabel: false },
+  { value: 180, label: '3m', showLabel: true },
+  { value: 240, label: '4m', showLabel: false },
+  { value: 300, label: '5m', showLabel: true },
 ];
 
 function formatTime(seconds: number): string {
@@ -64,12 +64,12 @@ export function TurnTimeSlider({ value, onChange }: TurnTimeSliderProps) {
         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
       />
       <div className="flex justify-between text-xs text-gray-500">
-        {TIME_OPTIONS.map((opt) => (
+        {TIME_OPTIONS.filter((opt) => opt.showLabel).map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={`px-2 py-1 rounded ${value === opt.value ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`}
+            className={`px-1 py-1 rounded ${value === opt.value ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`}
           >
             {opt.label}
           </button>

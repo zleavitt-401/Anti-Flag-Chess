@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +7,25 @@
 :root {
   --foreground: #171717;
   --background: #ffffff;
+
+  /* Brutalist-Gaming Color Palette */
+  --twilight-dark: hsl(240, 30%, 20%);
+  --twilight-mid: hsl(260, 35%, 30%);
+  --twilight-accent: hsl(260, 100%, 80%);
+  --twilight-glow: hsla(260, 100%, 80%, 0.3);
+
+  --forest-dark: hsl(142, 50%, 25%);
+  --forest-mid: hsl(142, 45%, 35%);
+  --forest-accent: hsl(142, 76%, 70%);
+  --forest-glow: hsla(142, 76%, 70%, 0.2);
+
+  --earth-dark: hsl(0, 60%, 15%);
+  --earth-mid: hsl(25, 70%, 40%);
+  --earth-light: hsl(45, 85%, 70%);
+
+  --ocean-dark: hsl(190, 40%, 12%);
+  --ocean-accent: hsl(190, 100%, 70%);
+  --ocean-glow: hsla(190, 100%, 70%, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,4 +63,32 @@ body {
   button {
     min-height: 44px;
   }
+}
+
+/* Brutalist range input styling */
+.irl-range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  cursor: pointer;
+}
+
+.irl-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: hsl(142, 76%, 70%);
+  border: 2px solid hsl(142, 50%, 50%);
+  cursor: pointer;
+  clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px));
+}
+
+.irl-range-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: hsl(142, 76%, 70%);
+  border: 2px solid hsl(142, 50%, 50%);
+  cursor: pointer;
+  border-radius: 0;
 }

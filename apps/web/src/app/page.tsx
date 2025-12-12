@@ -28,6 +28,18 @@ export default function Home() {
           <li>No more losing on time - the game keeps going!</li>
         </ul>
       </div>
+
+      <div className="mt-8 pt-8 border-t border-gray-200 w-full max-w-md">
+        <Link
+          href="/timer"
+          className="block w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-center"
+        >
+          Chess Timer (IRL)
+        </Link>
+        <p className="mt-2 text-xs text-gray-400 text-center">
+          Standalone timer for in-person games
+        </p>
+      </div>
     </div>
   );
 }
