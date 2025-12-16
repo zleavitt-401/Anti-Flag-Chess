@@ -6,6 +6,19 @@ import type { GameResult } from '@anti-flag-chess/core';
 interface GameOverModalProps {
   result: GameResult;
   playerColor: 'white' | 'black';
+  whiteTimeUsed: number;
+  blackTimeUsed: number;
+}
+
+function formatTotalTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes === 0) {
+    return `${seconds}s`;
+  }
+  return `${minutes}m ${seconds}s`;
 }
 
 function getResultMessage(result: GameResult, playerColor: 'white' | 'black'): { title: string; message: string } {
@@ -36,12 +49,13 @@ function getResultMessage(result: GameResult, playerColor: 'white' | 'black'): {
   };
 }
 
-export function GameOverModal({ result, playerColor }: GameOverModalProps) {
+export function GameOverModal({ result, playerColor, whiteTimeUsed, blackTimeUsed }: GameOverModalProps) {
   const router = useRouter();
   const { title, message } = getResultMessage(result, playerColor);
 
   const isWin = result.winner === playerColor;
   const isDraw = result.winner === 'draw';
+  const totalGameTime = whiteTimeUsed + blackTimeUsed;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -70,7 +84,35 @@ export function GameOverModal({ result, playerColor }: GameOverModalProps) {
         </div>
 
         <h2 className="text-2xl font-bold mb-2">{title}</h2>
-        <p className="text-gray-600 mb-6">{message}</p>
+        <p className="text-gray-600 mb-4">{message}</p>
+
+        {/* Time Summary */}
+        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Game Time</h3>
+
+          <div className="text-center mb-3">
+            <div className="text-2xl font-bold text-gray-800">{formatTotalTime(totalGameTime)}</div>
+            <div className="text-xs text-gray-500 uppercase">Total Active Play</div>
+          </div>
+
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="w-4 h-4 rounded border border-gray-300 bg-white" />
+                <span className="text-sm font-medium text-gray-600">White</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-800">{formatTotalTime(whiteTimeUsed)}</div>
+            </div>
+            <div className="w-px h-10 bg-gray-200" />
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="w-4 h-4 rounded border border-gray-300 bg-gray-800" />
+                <span className="text-sm font-medium text-gray-600">Black</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-800">{formatTotalTime(blackTimeUsed)}</div>
+            </div>
+          </div>
+        </div>
 
         <div className="space-y-2">
           <button

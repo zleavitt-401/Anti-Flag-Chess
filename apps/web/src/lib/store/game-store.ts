@@ -30,6 +30,10 @@ export interface GameStoreState {
   // Timer state
   timerState: TimerState | null;
 
+  // Time tracking (cumulative time used per player in ms)
+  whiteTimeUsed: number;
+  blackTimeUsed: number;
+
   // Game result
   result: GameResult | null;
 
@@ -58,6 +62,7 @@ export interface GameStoreState {
   setInviteLink: (link: string | null) => void;
   setAutoMoveNotification: (notification: { player: 'white' | 'black' } | null) => void;
   setPendingDrawOffer: (offer: { from: 'white' | 'black' } | null) => void;
+  addTimeUsed: (color: 'white' | 'black', ms: number) => void;
   reset: () => void;
 }
 
@@ -73,6 +78,8 @@ const initialState = {
   lastMove: null,
   isLastMoveAuto: false,
   timerState: null,
+  whiteTimeUsed: 0,
+  blackTimeUsed: 0,
   result: null,
   error: null,
   inviteLink: null,
@@ -107,5 +114,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setInviteLink: (link) => set({ inviteLink: link }),
   setAutoMoveNotification: (notification) => set({ autoMoveNotification: notification }),
   setPendingDrawOffer: (offer) => set({ pendingDrawOffer: offer }),
+  addTimeUsed: (color, ms) =>
+    set((s) => ({
+      whiteTimeUsed: color === 'white' ? s.whiteTimeUsed + ms : s.whiteTimeUsed,
+      blackTimeUsed: color === 'black' ? s.blackTimeUsed + ms : s.blackTimeUsed,
+    })),
   reset: () => set(initialState),
 }));

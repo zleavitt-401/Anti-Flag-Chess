@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { BoardState, TimerState, Move, GameResult } from '@anti-flag-chess/core';
 import { useGameStore } from '@/lib/store/game-store';
@@ -57,12 +57,16 @@ export function ActiveGame({ socket, gameId }: ActiveGameProps) {
     lastMove,
     isLastMoveAuto,
     autoMoveNotification,
+    settings,
+    whiteTimeUsed,
+    blackTimeUsed,
     setBoardState,
     setTimerState,
     addMove,
     setResult,
     setStatus,
     setAutoMoveNotification,
+    addTimeUsed,
   } = useGameStore();
 
   const { makeMove } = useMakeMove(socket, gameId);
@@ -76,17 +80,48 @@ export function ActiveGame({ socket, gameId }: ActiveGameProps) {
   const [hasOfferedDraw, setHasOfferedDraw] = useState(false);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
+  // Track timer state before moves to calculate time used
+  const lastTimerStateRef = useRef<TimerState | null>(null);
+
+  // Keep ref updated with current timer state
+  useEffect(() => {
+    lastTimerStateRef.current = timerState;
+  }, [timerState]);
+
   // Listen for move events
   useEffect(() => {
     if (!socket) return;
 
     const handleMove = (event: MoveEvent) => {
+      // Calculate time used by the player who just moved
+      // Turn has switched, so the player who moved is the opposite of current turn
+      const playerWhoMoved = event.boardState.turn === 'white' ? 'black' : 'white';
+      if (settings && lastTimerStateRef.current) {
+        const turnTimeMs = settings.turnTimeSeconds * 1000;
+        // Get the time remaining before this move was made
+        const prevTimeRemaining = playerWhoMoved === 'white'
+          ? lastTimerStateRef.current.whiteTimeRemaining
+          : lastTimerStateRef.current.blackTimeRemaining;
+        // Time used = full turn time - remaining time before move
+        const timeUsed = turnTimeMs - prevTimeRemaining;
+        if (timeUsed > 0) {
+          addTimeUsed(playerWhoMoved, timeUsed);
+        }
+      }
       setBoardState(event.boardState);
       setTimerState(event.timers);
       addMove(event.move);
     };
 
     const handleAutoMove = (event: AutoMoveEvent) => {
+      // For auto-moves, the player used all their time (plus grace period if applicable)
+      const playerWhoMoved = event.boardState.turn === 'white' ? 'black' : 'white';
+      if (settings) {
+        // Auto-move means they used full turn time + grace period
+        const turnTimeMs = settings.turnTimeSeconds * 1000;
+        const graceTimeMs = settings.gracePeriodSeconds * 1000;
+        addTimeUsed(playerWhoMoved, turnTimeMs + graceTimeMs);
+      }
       setBoardState(event.boardState);
       setTimerState(event.timers);
       addMove(event.move, true); // Mark as auto-move
@@ -136,7 +171,7 @@ export function ActiveGame({ socket, gameId }: ActiveGameProps) {
       socket.off('opponent_disconnected', handleOpponentDisconnected);
       socket.off('opponent_reconnected', handleOpponentReconnected);
     };
-  }, [socket, setBoardState, setTimerState, addMove, setResult, setStatus, setAutoMoveNotification]);
+  }, [socket, setBoardState, setTimerState, addMove, setResult, setStatus, setAutoMoveNotification, settings, addTimeUsed]);
 
   const handleMove = useCallback(
     (move: string) => {
@@ -251,7 +286,14 @@ export function ActiveGame({ socket, gameId }: ActiveGameProps) {
       )}
 
       {/* Game over modal */}
-      {result && <GameOverModal result={result} playerColor={playerColor} />}
+      {result && (
+        <GameOverModal
+          result={result}
+          playerColor={playerColor}
+          whiteTimeUsed={whiteTimeUsed}
+          blackTimeUsed={blackTimeUsed}
+        />
+      )}
 
       {/* Resign confirmation modal */}
       {showResignModal && (
