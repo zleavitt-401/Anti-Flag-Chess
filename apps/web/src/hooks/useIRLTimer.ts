@@ -37,17 +37,20 @@ export function useIRLTimer() {
     const elapsed = now - lastTickRef.current;
     lastTickRef.current = now;
 
-    const activeTimer = getActiveTimer();
+    // Read FRESH state from store to avoid stale closure issues
+    // This is critical for resume behavior - closure session would have old timer values
+    const currentSession = useIRLTimerStore.getState().session;
+    const activeTimer = currentSession[currentSession.activePlayer];
 
     // If in grace period, tick grace timer instead of main timer
-    if (session.isInGracePeriod) {
+    if (currentSession.isInGracePeriod) {
       tickGrace(elapsed);
 
       // Check if grace period has expired
-      const gracePeriodMs = session.config.gracePeriodSeconds * 1000;
-      if (session.graceElapsedMs + elapsed >= gracePeriodMs) {
+      const gracePeriodMs = currentSession.config.gracePeriodSeconds * 1000;
+      if (currentSession.graceElapsedMs + elapsed >= gracePeriodMs) {
         exitGracePeriod();
-        if (session.config.timeoutBehavior === 'continue') {
+        if (currentSession.config.timeoutBehavior === 'continue') {
           switchTurn();
         } else {
           pauseWithTimeout();
@@ -60,33 +63,26 @@ export function useIRLTimer() {
     tick(elapsed);
 
     // Check if timer hit zero - enter grace period
-    if (activeTimer.remainingMs <= elapsed && !session.isInGracePeriod) {
+    if (activeTimer.remainingMs <= elapsed && !currentSession.isInGracePeriod) {
       enterGracePeriod();
       return;
     }
 
     // Play audio alert at each second boundary when in audio threshold
-    if (session.config.soundEnabled && activeTimer.remainingMs <= AUDIO_THRESHOLD_MS) {
+    if (currentSession.config.soundEnabled && activeTimer.remainingMs <= AUDIO_THRESHOLD_MS) {
       const currentSecond = Math.ceil((activeTimer.remainingMs - elapsed) / 1000);
       if (currentSecond !== lastSecondRef.current && currentSecond > 0) {
         lastSecondRef.current = currentSecond;
-        playSoundType(session.config.soundType);
+        playSoundType(currentSession.config.soundType);
       }
     }
   }, [
     tick,
     tickGrace,
-    getActiveTimer,
     switchTurn,
     enterGracePeriod,
     exitGracePeriod,
     pauseWithTimeout,
-    session.isInGracePeriod,
-    session.graceElapsedMs,
-    session.config.soundEnabled,
-    session.config.soundType,
-    session.config.gracePeriodSeconds,
-    session.config.timeoutBehavior,
   ]);
 
   // Start/stop interval based on phase
