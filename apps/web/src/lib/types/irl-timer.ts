@@ -8,6 +8,23 @@ export type PlayerColor = 'white' | 'black';
 export type SessionPhase = 'setup' | 'playing' | 'paused' | 'ended';
 
 /**
+ * Timeout behavior when grace period expires
+ */
+export type TimeoutBehavior = 'continue' | 'pause';
+
+/**
+ * Valid grace period durations (1-5 seconds)
+ */
+export type GracePeriodSeconds = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * Context for timeout pause (stores which player expired)
+ */
+export interface TimeoutContext {
+  expiredPlayer: PlayerColor;
+}
+
+/**
  * Technology-themed sound options for timer alerts
  */
 export type SoundType =
@@ -35,6 +52,10 @@ export interface TimerConfiguration {
   soundEnabled: boolean;
   /** Selected sound type for alerts */
   soundType: SoundType;
+  /** Grace period duration after timer expires (1-5 seconds) */
+  gracePeriodSeconds: GracePeriodSeconds;
+  /** Behavior when grace period expires */
+  timeoutBehavior: TimeoutBehavior;
 }
 
 /**
@@ -69,6 +90,14 @@ export interface TimerSession {
   startedAt: number | null;
   /** Timestamp when session ended */
   endedAt: number | null;
+  /** Whether currently in grace period */
+  isInGracePeriod: boolean;
+  /** Time elapsed in grace period (ms) */
+  graceElapsedMs: number;
+  /** Which player triggered the grace period */
+  graceTriggerPlayer: PlayerColor | null;
+  /** Context for timeout pause (which player expired) */
+  timeoutContext: TimeoutContext | null;
 }
 
 /**
@@ -79,12 +108,28 @@ export const PULSE_THRESHOLD_MS = 5000;    // 5 seconds
 export const AUDIO_THRESHOLD_MS = 3000;    // 3 seconds
 
 /**
+ * Grace period configuration
+ */
+export const GRACE_PERIOD_OPTIONS: GracePeriodSeconds[] = [1, 2, 3, 4, 5];
+export const DEFAULT_GRACE_PERIOD_SECONDS: GracePeriodSeconds = 2;
+export const DEFAULT_TIMEOUT_BEHAVIOR: TimeoutBehavior = 'continue';
+
+/**
+ * Grace period animation timing (accelerating pulse)
+ * Pulse starts at 1000ms duration and speeds up to 200ms
+ */
+export const GRACE_PULSE_START_MS = 1000;
+export const GRACE_PULSE_END_MS = 200;
+
+/**
  * Default configuration values
  */
 export const DEFAULT_CONFIG: TimerConfiguration = {
   turnTimeSeconds: 60, // 1 minute default
   soundEnabled: false,
   soundType: 'digital-pulse',
+  gracePeriodSeconds: DEFAULT_GRACE_PERIOD_SECONDS,
+  timeoutBehavior: DEFAULT_TIMEOUT_BEHAVIOR,
 };
 
 /**
@@ -112,5 +157,9 @@ export function createDefaultSession(): TimerSession {
     activePlayer: 'white',
     startedAt: null,
     endedAt: null,
+    isInGracePeriod: false,
+    graceElapsedMs: 0,
+    graceTriggerPlayer: null,
+    timeoutContext: null,
   };
 }

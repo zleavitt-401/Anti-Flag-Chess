@@ -6,6 +6,8 @@ import {
   PlayerColor,
   SessionPhase,
   SoundType,
+  TimeoutBehavior,
+  GracePeriodSeconds,
   createDefaultSession,
   createPlayerTimer,
   WARNING_THRESHOLD_MS,
@@ -20,6 +22,8 @@ export interface IRLTimerStore {
   setTurnTime: (seconds: number) => void;
   setSoundEnabled: (enabled: boolean) => void;
   setSoundType: (type: SoundType) => void;
+  setGracePeriod: (seconds: GracePeriodSeconds) => void;
+  setTimeoutBehavior: (behavior: TimeoutBehavior) => void;
 
   // Game flow actions
   startGame: () => void;
@@ -30,6 +34,12 @@ export interface IRLTimerStore {
   playAgain: () => void;
   backToSetup: () => void;
 
+  // Grace period actions
+  enterGracePeriod: () => void;
+  exitGracePeriod: () => void;
+  tickGrace: (elapsedMs: number) => void;
+  pauseWithTimeout: () => void;
+
   // Timer tick (called by interval)
   tick: (elapsedMs: number) => void;
 
@@ -38,6 +48,7 @@ export interface IRLTimerStore {
   getInactiveTimer: () => PlayerTimer;
   isWarningTime: () => boolean;
   isPulseTime: () => boolean;
+  getGraceProgress: () => number;
 }
 
 export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
@@ -79,6 +90,30 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
     }));
   },
 
+  setGracePeriod: (seconds: GracePeriodSeconds) => {
+    set((state) => ({
+      session: {
+        ...state.session,
+        config: {
+          ...state.session.config,
+          gracePeriodSeconds: seconds,
+        },
+      },
+    }));
+  },
+
+  setTimeoutBehavior: (behavior: TimeoutBehavior) => {
+    set((state) => ({
+      session: {
+        ...state.session,
+        config: {
+          ...state.session.config,
+          timeoutBehavior: behavior,
+        },
+      },
+    }));
+  },
+
   startGame: () => {
     const { session } = get();
     const turnTimeMs = session.config.turnTimeSeconds * 1000;
@@ -92,6 +127,10 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
         activePlayer: 'white',
         startedAt: Date.now(),
         endedAt: null,
+        isInGracePeriod: false,
+        graceElapsedMs: 0,
+        graceTriggerPlayer: null,
+        timeoutContext: null,
       },
     });
   },
@@ -104,8 +143,11 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
       const nextPlayer: PlayerColor = currentPlayer === 'white' ? 'black' : 'white';
 
       // Calculate time used by current player this turn
+      // If in grace period, count as full turn time (timer went to 0)
       const currentTimer = session[currentPlayer];
-      const timeUsedThisTurn = turnTimeMs - currentTimer.remainingMs;
+      const timeUsedThisTurn = session.isInGracePeriod
+        ? turnTimeMs
+        : turnTimeMs - currentTimer.remainingMs;
 
       // Get next player's timer - reset if it was expired
       const nextTimer = session[nextPlayer];
@@ -115,6 +157,10 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
         session: {
           ...session,
           activePlayer: nextPlayer,
+          // Clear grace period state on switch
+          isInGracePeriod: false,
+          graceElapsedMs: 0,
+          graceTriggerPlayer: null,
           [currentPlayer]: {
             ...currentTimer,
             totalUsedMs: currentTimer.totalUsedMs + timeUsedThisTurn,
@@ -136,17 +182,48 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
       session: {
         ...state.session,
         phase: 'paused',
+        // Clear grace period state if pausing during grace
+        isInGracePeriod: false,
+        graceElapsedMs: 0,
+        graceTriggerPlayer: null,
       },
     }));
   },
 
   resume: () => {
-    set((state) => ({
-      session: {
-        ...state.session,
-        phase: 'playing',
-      },
-    }));
+    set((state) => {
+      const { session } = state;
+      const turnTimeMs = session.config.turnTimeSeconds * 1000;
+
+      // If resuming from a timeout pause, switch to the other player
+      if (session.timeoutContext) {
+        const expiredPlayer = session.timeoutContext.expiredPlayer;
+        const nextPlayer = expiredPlayer === 'white' ? 'black' : 'white';
+        const expiredTimer = session[expiredPlayer];
+
+        return {
+          session: {
+            ...session,
+            phase: 'playing',
+            activePlayer: nextPlayer,
+            timeoutContext: null,
+            [expiredPlayer]: {
+              ...expiredTimer,
+              remainingMs: turnTimeMs, // Reset expired player's timer
+              expired: false,
+            },
+          },
+        };
+      }
+
+      // Normal resume
+      return {
+        session: {
+          ...session,
+          phase: 'playing',
+        },
+      };
+    });
   },
 
   endGame: () => {
@@ -172,6 +249,10 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
         activePlayer: 'white',
         startedAt: Date.now(),
         endedAt: null,
+        isInGracePeriod: false,
+        graceElapsedMs: 0,
+        graceTriggerPlayer: null,
+        timeoutContext: null,
       },
     });
   },
@@ -180,6 +261,55 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
     set({
       session: createDefaultSession(),
     });
+  },
+
+  enterGracePeriod: () => {
+    set((state) => ({
+      session: {
+        ...state.session,
+        isInGracePeriod: true,
+        graceElapsedMs: 0,
+        graceTriggerPlayer: state.session.activePlayer,
+      },
+    }));
+  },
+
+  exitGracePeriod: () => {
+    set((state) => ({
+      session: {
+        ...state.session,
+        isInGracePeriod: false,
+        graceElapsedMs: 0,
+        graceTriggerPlayer: null,
+      },
+    }));
+  },
+
+  tickGrace: (elapsedMs: number) => {
+    set((state) => {
+      if (!state.session.isInGracePeriod) return state;
+      return {
+        session: {
+          ...state.session,
+          graceElapsedMs: state.session.graceElapsedMs + elapsedMs,
+        },
+      };
+    });
+  },
+
+  pauseWithTimeout: () => {
+    set((state) => ({
+      session: {
+        ...state.session,
+        phase: 'paused',
+        isInGracePeriod: false,
+        graceElapsedMs: 0,
+        timeoutContext: state.session.graceTriggerPlayer
+          ? { expiredPlayer: state.session.graceTriggerPlayer }
+          : null,
+        graceTriggerPlayer: null,
+      },
+    }));
   },
 
   tick: (elapsedMs: number) => {
@@ -225,5 +355,12 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
   isPulseTime: () => {
     const activeTimer = get().getActiveTimer();
     return activeTimer.remainingMs <= PULSE_THRESHOLD_MS && activeTimer.remainingMs > 0;
+  },
+
+  getGraceProgress: () => {
+    const { session } = get();
+    if (!session.isInGracePeriod) return 0;
+    const gracePeriodMs = session.config.gracePeriodSeconds * 1000;
+    return Math.min(1, session.graceElapsedMs / gracePeriodMs);
   },
 }));

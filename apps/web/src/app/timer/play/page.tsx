@@ -7,6 +7,7 @@ import { IrlTimerDisplay } from '../../../components/irl-timer-display';
 import { IrlTimerControls } from '../../../components/irl-timer-controls';
 import { IrlPausedOverlay } from '../../../components/irl-paused-overlay';
 import { IrlSummaryModal } from '../../../components/irl-summary-modal';
+import { IrlGraceOverlay } from '../../../components/irl-grace-overlay';
 
 export default function TimerPlayPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function TimerPlayPage() {
     session,
     isWarningTime,
     isPulseTime,
+    graceProgress,
     switchTurn,
     pause,
     resume,
@@ -118,9 +120,18 @@ export default function TimerPlayPage() {
         </div>
       </div>
 
+      {/* Grace period overlay */}
+      {session.isInGracePeriod && (
+        <IrlGraceOverlay
+          graceElapsedMs={session.graceElapsedMs}
+          graceProgress={graceProgress}
+          onTap={switchTurn}
+        />
+      )}
+
       {/* Paused overlay */}
       {isPaused && (
-        <IrlPausedOverlay onResume={resume} />
+        <IrlPausedOverlay onResume={resume} timeoutContext={session.timeoutContext} />
       )}
 
       {/* Summary modal */}

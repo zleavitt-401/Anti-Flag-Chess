@@ -16,8 +16,13 @@ export function useIRLTimer() {
   const {
     session,
     tick,
+    tickGrace,
     switchTurn,
+    enterGracePeriod,
+    exitGracePeriod,
+    pauseWithTimeout,
     getActiveTimer,
+    getGraceProgress,
     isWarningTime,
     isPulseTime,
   } = store;
@@ -32,23 +37,57 @@ export function useIRLTimer() {
     const elapsed = now - lastTickRef.current;
     lastTickRef.current = now;
 
+    const activeTimer = getActiveTimer();
+
+    // If in grace period, tick grace timer instead of main timer
+    if (session.isInGracePeriod) {
+      tickGrace(elapsed);
+
+      // Check if grace period has expired
+      const gracePeriodMs = session.config.gracePeriodSeconds * 1000;
+      if (session.graceElapsedMs + elapsed >= gracePeriodMs) {
+        exitGracePeriod();
+        if (session.config.timeoutBehavior === 'continue') {
+          switchTurn();
+        } else {
+          pauseWithTimeout();
+        }
+      }
+      return;
+    }
+
+    // Normal tick
     tick(elapsed);
 
-    // Check for auto-switch on expiry
-    const activeTimer = getActiveTimer();
-    if (activeTimer.remainingMs <= 0 && activeTimer.expired) {
-      switchTurn();
+    // Check if timer hit zero - enter grace period
+    if (activeTimer.remainingMs <= elapsed && !session.isInGracePeriod) {
+      enterGracePeriod();
+      return;
     }
 
     // Play audio alert at each second boundary when in audio threshold
     if (session.config.soundEnabled && activeTimer.remainingMs <= AUDIO_THRESHOLD_MS) {
-      const currentSecond = Math.ceil(activeTimer.remainingMs / 1000);
+      const currentSecond = Math.ceil((activeTimer.remainingMs - elapsed) / 1000);
       if (currentSecond !== lastSecondRef.current && currentSecond > 0) {
         lastSecondRef.current = currentSecond;
         playSoundType(session.config.soundType);
       }
     }
-  }, [tick, getActiveTimer, switchTurn, session.config.soundEnabled, session.config.soundType]);
+  }, [
+    tick,
+    tickGrace,
+    getActiveTimer,
+    switchTurn,
+    enterGracePeriod,
+    exitGracePeriod,
+    pauseWithTimeout,
+    session.isInGracePeriod,
+    session.graceElapsedMs,
+    session.config.soundEnabled,
+    session.config.soundType,
+    session.config.gracePeriodSeconds,
+    session.config.timeoutBehavior,
+  ]);
 
   // Start/stop interval based on phase
   useEffect(() => {
@@ -88,12 +127,14 @@ export function useIRLTimer() {
   // Compute derived values (call the functions)
   const warningTime = isWarningTime();
   const pulseTime = isPulseTime();
+  const graceProgress = getGraceProgress();
 
   return {
     ...store,
     session,
     isWarningTime: warningTime,
     isPulseTime: pulseTime,
+    graceProgress,
     activeTimer: getActiveTimer(),
   };
 }

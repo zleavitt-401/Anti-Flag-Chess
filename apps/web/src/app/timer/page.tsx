@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { IrlTurnTimeSlider } from '../../components/irl-turn-time-slider';
 import { useIRLTimerStore } from '../../lib/store/irl-timer-store';
 import { unlockAudio, playSoundType } from '../../lib/audio/beep';
-import { SOUND_OPTIONS } from '../../lib/types/irl-timer';
+import { SOUND_OPTIONS, GRACE_PERIOD_OPTIONS, GracePeriodSeconds } from '../../lib/types/irl-timer';
 
 // Brutalist beveled corners
 const BEVEL_CLIP = 'polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))';
@@ -13,7 +13,7 @@ const SMALL_BEVEL_CLIP = 'polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 10
 
 export default function TimerSetupPage() {
   const router = useRouter();
-  const { session, setTurnTime, setSoundEnabled, setSoundType, startGame } = useIRLTimerStore();
+  const { session, setTurnTime, setSoundEnabled, setSoundType, setGracePeriod, setTimeoutBehavior, startGame } = useIRLTimerStore();
 
   const handleStart = () => {
     if (session.config.soundEnabled) {
@@ -183,6 +183,119 @@ export default function TimerSetupPage() {
             </div>
           </div>
         )}
+
+        {/* Grace Period Setting */}
+        <div
+          className="p-5"
+          style={{
+            clipPath: BEVEL_CLIP,
+            background: 'linear-gradient(135deg, hsl(240, 30%, 18%), hsl(260, 35%, 25%))',
+            border: '2px solid hsl(260, 35%, 35%)',
+            boxShadow: '4px 4px 0 hsla(260, 100%, 80%, 0.2)',
+          }}
+        >
+          <div className="mb-3">
+            <span
+              className="text-sm font-semibold uppercase tracking-wider"
+              style={{ color: 'hsl(260, 100%, 80%)' }}
+            >
+              Grace Period
+            </span>
+            <p
+              className="text-xs mt-1 uppercase tracking-wide"
+              style={{ color: 'hsl(260, 100%, 80%)', opacity: 0.6 }}
+            >
+              Extra time after timer expires
+            </p>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {GRACE_PERIOD_OPTIONS.map((seconds) => (
+              <button
+                key={seconds}
+                type="button"
+                onClick={() => setGracePeriod(seconds as GracePeriodSeconds)}
+                className="px-3 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-100"
+                style={{
+                  clipPath: SMALL_BEVEL_CLIP,
+                  background: session.config.gracePeriodSeconds === seconds
+                    ? 'linear-gradient(135deg, hsl(142, 50%, 25%), hsl(142, 45%, 32%))'
+                    : 'linear-gradient(135deg, hsl(240, 25%, 20%), hsl(240, 25%, 25%))',
+                  border: `2px solid ${session.config.gracePeriodSeconds === seconds ? 'hsl(142, 50%, 50%)' : 'hsl(240, 20%, 35%)'}`,
+                  color: session.config.gracePeriodSeconds === seconds ? 'hsl(142, 76%, 70%)' : 'hsl(260, 100%, 80%)',
+                  boxShadow: session.config.gracePeriodSeconds === seconds
+                    ? '3px 3px 0 hsla(142, 76%, 70%, 0.2)'
+                    : '2px 2px 0 hsla(260, 100%, 80%, 0.1)',
+                }}
+              >
+                {seconds}s
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Timeout Behavior Setting */}
+        <div
+          className="p-5"
+          style={{
+            clipPath: BEVEL_CLIP,
+            background: 'linear-gradient(135deg, hsl(240, 30%, 18%), hsl(260, 35%, 25%))',
+            border: '2px solid hsl(260, 35%, 35%)',
+            boxShadow: '4px 4px 0 hsla(260, 100%, 80%, 0.2)',
+          }}
+        >
+          <div className="mb-3">
+            <span
+              className="text-sm font-semibold uppercase tracking-wider"
+              style={{ color: 'hsl(260, 100%, 80%)' }}
+            >
+              After Grace Expires
+            </span>
+            <p
+              className="text-xs mt-1 uppercase tracking-wide"
+              style={{ color: 'hsl(260, 100%, 80%)', opacity: 0.6 }}
+            >
+              What happens when grace period ends
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => setTimeoutBehavior('continue')}
+              className="w-full text-left px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-100"
+              style={{
+                clipPath: SMALL_BEVEL_CLIP,
+                background: session.config.timeoutBehavior === 'continue'
+                  ? 'linear-gradient(135deg, hsl(142, 50%, 25%), hsl(142, 45%, 32%))'
+                  : 'linear-gradient(135deg, hsl(240, 25%, 20%), hsl(240, 25%, 25%))',
+                border: `2px solid ${session.config.timeoutBehavior === 'continue' ? 'hsl(142, 50%, 50%)' : 'hsl(240, 20%, 35%)'}`,
+                color: session.config.timeoutBehavior === 'continue' ? 'hsl(142, 76%, 70%)' : 'hsl(260, 100%, 80%)',
+                boxShadow: session.config.timeoutBehavior === 'continue'
+                  ? '3px 3px 0 hsla(142, 76%, 70%, 0.2)'
+                  : '2px 2px 0 hsla(260, 100%, 80%, 0.1)',
+              }}
+            >
+              Continue Playing
+            </button>
+            <button
+              type="button"
+              onClick={() => setTimeoutBehavior('pause')}
+              className="w-full text-left px-4 py-3 text-sm font-medium uppercase tracking-wider transition-all duration-100"
+              style={{
+                clipPath: SMALL_BEVEL_CLIP,
+                background: session.config.timeoutBehavior === 'pause'
+                  ? 'linear-gradient(135deg, hsl(142, 50%, 25%), hsl(142, 45%, 32%))'
+                  : 'linear-gradient(135deg, hsl(240, 25%, 20%), hsl(240, 25%, 25%))',
+                border: `2px solid ${session.config.timeoutBehavior === 'pause' ? 'hsl(142, 50%, 50%)' : 'hsl(240, 20%, 35%)'}`,
+                color: session.config.timeoutBehavior === 'pause' ? 'hsl(142, 76%, 70%)' : 'hsl(260, 100%, 80%)',
+                boxShadow: session.config.timeoutBehavior === 'pause'
+                  ? '3px 3px 0 hsla(142, 76%, 70%, 0.2)'
+                  : '2px 2px 0 hsla(260, 100%, 80%, 0.1)',
+              }}
+            >
+              Pause Game
+            </button>
+          </div>
+        </div>
 
         {/* Start Button */}
         <button
