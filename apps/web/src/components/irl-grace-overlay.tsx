@@ -9,6 +9,8 @@ interface IrlGraceOverlayProps {
   graceProgress: number;
   /** Callback when overlay is tapped to switch turns */
   onTap: () => void;
+  /** Whether to rotate 180° (for Black player's grace period) */
+  isRotated?: boolean;
 }
 
 /**
@@ -19,6 +21,7 @@ export function IrlGraceOverlay({
   graceElapsedMs,
   graceProgress,
   onTap,
+  isRotated = false,
 }: IrlGraceOverlayProps) {
   // Calculate accelerating pulse duration (1000ms → 200ms)
   const pulseDuration =
@@ -35,6 +38,7 @@ export function IrlGraceOverlay({
       style={{
         fontFamily: "'IBM Plex Mono', monospace",
         animation: `grace-pulse ${pulseDuration}ms ease-in-out infinite`,
+        transform: isRotated ? 'rotate(180deg)' : undefined,
       }}
     >
       {/* Inline keyframes for pulsing animation */}

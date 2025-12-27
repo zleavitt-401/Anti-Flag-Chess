@@ -126,6 +126,7 @@ export default function TimerPlayPage() {
           graceElapsedMs={session.graceElapsedMs}
           graceProgress={graceProgress}
           onTap={switchTurn}
+          isRotated={session.graceTriggerPlayer === 'black'}
         />
       )}
 

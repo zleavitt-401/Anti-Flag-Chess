@@ -200,6 +200,7 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
         const expiredPlayer = session.timeoutContext.expiredPlayer;
         const nextPlayer = expiredPlayer === 'white' ? 'black' : 'white';
         const expiredTimer = session[expiredPlayer];
+        const nextTimer = session[nextPlayer];
 
         return {
           session: {
@@ -209,7 +210,12 @@ export const useIRLTimerStore = create<IRLTimerStore>((set, get) => ({
             timeoutContext: null,
             [expiredPlayer]: {
               ...expiredTimer,
-              remainingMs: turnTimeMs, // Reset expired player's timer
+              remainingMs: turnTimeMs, // Reset expired player's timer for their next turn
+              expired: false,
+            },
+            [nextPlayer]: {
+              ...nextTimer,
+              remainingMs: turnTimeMs, // Reset next player's timer - it's the start of their turn
               expired: false,
             },
           },
